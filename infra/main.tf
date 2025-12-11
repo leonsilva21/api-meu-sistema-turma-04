@@ -19,12 +19,10 @@ data "archive_file" "bundle" {
   type        = "zip"
   output_path = local.bundle_zip_path
 
-  # Empacota o JAR gerado pelo Maven como arquivo principal do bundle
+  # Empacota apenas o JAR gerado pelo Maven.
+  # O bundle resultante é um ZIP contendo o JAR na raiz,
+  # compatível com a plataforma Java/Corretto do Elastic Beanstalk.
   source_file = local.artifact_source
-
-  # Adiciona um Procfile simples ao zip para orientar o Elastic Beanstalk
-  source_content_filename = "Procfile"
-  source_content          = "web: java -jar application.jar"
 }
 
 resource "aws_s3_bucket" "artifacts" {
