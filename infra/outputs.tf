@@ -20,5 +20,10 @@ output "rds_db_name" {
 
 output "beanstalk_artifact_bucket" {
   description = "Bucket S3 (pré-criado) para upload das versões do backend."
-  value       = var.artifact_bucket_name
+  value       = aws_s3_bucket.artifacts.bucket
+}
+
+output "beanstalk_version_label" {
+  description = "Version label atualmente publicado no Elastic Beanstalk."
+  value       = aws_elastic_beanstalk_application_version.backend.name
 }

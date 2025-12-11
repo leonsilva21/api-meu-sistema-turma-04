@@ -11,12 +11,6 @@ variable "app_name" {
   default     = "meu-sistema"
 }
 
-variable "artifact_bucket_name" {
-  description = "Nome do bucket S3 para uploads do backend (pode ser criado manualmente)."
-  type        = string
-  default     = "meusistema-backend-artifacts"
-}
-
 variable "db_user" {
   description = "Usuário administrador do banco PostgreSQL."
   type        = string
@@ -26,4 +20,22 @@ variable "db_password" {
   description = "Senha do usuário administrador do banco PostgreSQL."
   type        = string
   sensitive   = true
+}
+
+variable "artifact_bucket_name" {
+  description = "Nome fixo do bucket S3 de artefatos (deixe vazio para criar um nome único automaticamente)."
+  type        = string
+  default     = ""
+}
+
+variable "artifact_jar_path" {
+  description = "Caminho para o JAR gerado pelo Maven que será empacotado e enviado ao Elastic Beanstalk."
+  type        = string
+  default     = "../target/api-0.0.1-SNAPSHOT.jar"
+}
+
+variable "version_label" {
+  description = "Label opcional para a versão do Elastic Beanstalk (por padrão usa o hash do artefato)."
+  type        = string
+  default     = ""
 }

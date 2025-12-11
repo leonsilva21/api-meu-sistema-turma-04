@@ -2,21 +2,63 @@ name: Provision Infrastructure
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Escolha se quer aplicar ou destruir a infraestrutura
+        required: true
+        default: apply
+        type: choice
+        options:
+          - apply
+          - destroy
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
   TF_VAR_db_user: ${{ secrets.TF_DB_USER }}
   TF_VAR_db_password: ${{ secrets.TF_DB_PASSWORD }}
-  TF_VAR_artifact_bucket_name: ${{ vars.ARTIFACT_BUCKET_NAME || 'meusistema-backend-artifacts-kelson' }}
+  TF_VAR_artifact_bucket_name: ${{ vars.ARTIFACT_BUCKET_NAME || '' }}
+  TF_VAR_version_label: ${{ github.sha }}
+  TF_OPERATION: ${{ github.event.inputs.operation || 'apply' }}
 
 jobs:
-  apply:
+  terraform:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build backend artifact
+        run: ./mvnw -B package -DskipTests
+
+      - name: Export Terraform artifact path
+        run: |
+          BACKEND_JAR=$(ls target/*.jar | head -n 1)
+          if [ -z "$BACKEND_JAR" ]; then
+            echo "Nenhum JAR encontrado em target/. Execute o build antes do Terraform."
+            exit 1
+          fi
+          echo "TF_VAR_artifact_jar_path=../$BACKEND_JAR" >> $GITHUB_ENV
+
+      - name: Restore previous Terraform state (artifact)
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          workflow: terraform.yml
+          name: terraform-state
+          path: infra
+          workflow_conclusion: success
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -34,10 +76,26 @@ jobs:
         working-directory: infra
         run: terraform init
 
-      - name: Terraform apply
+      - name: Terraform plan (${{ env.TF_OPERATION }})
         working-directory: infra
-        run: terraform apply -auto-approve
+        run: |
+          if [ "${TF_OPERATION}" = "destroy" ]; then
+            terraform plan -out=tfplan -destroy
+          else
+            terraform plan -out=tfplan
+          fi
+
+      - name: Terraform ${{ env.TF_OPERATION }}
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
 
       - name: Show Terraform outputs
+        if: env.TF_OPERATION == 'apply'
         working-directory: infra
         run: terraform output
+
+      - name: Upload Terraform state artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-state
+          path: infra/terraform.tfstate
