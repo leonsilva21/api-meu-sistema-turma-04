@@ -232,6 +232,32 @@ resource "aws_ecr_repository" "app_repo" {
 }
 
 ########################
+# IAM para App Runner acessar ECR
+########################
+
+resource "aws_iam_role" "apprunner_ecr_access" {
+  name = "${var.project_name}-apprunner-ecr-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "build.apprunner.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apprunner_ecr_access" {
+  role       = aws_iam_role.apprunner_ecr_access.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
+}
+
+########################
 # VPC Connector para App Runner
 ########################
 
@@ -253,12 +279,16 @@ resource "aws_apprunner_service" "app" {
   service_name = var.project_name
 
   source_configuration {
-    auto_deployments_enabled = false
+    auto_deployments_enabled = true
+
+    authentication_configuration {
+      access_role_arn = aws_iam_role.apprunner_ecr_access.arn
+    }
 
     image_repository {
-      # Imagem pública inicial para não quebrar no primeiro apply
-      image_identifier      = "public.ecr.aws/aws-containers/hello-app-runner:latest"
-      image_repository_type = "ECR_PUBLIC"
+      # Imagem privada no ECR (tag latest)
+      image_identifier      = "${aws_ecr_repository.app_repo.repository_url}:latest"
+      image_repository_type = "ECR"
 
       image_configuration {
         port = "8080"
@@ -267,6 +297,7 @@ resource "aws_apprunner_service" "app" {
           SPRING_DATASOURCE_URL      = "jdbc:postgresql://${aws_db_instance.postgres.address}:5432/${aws_db_instance.postgres.db_name}"
           SPRING_DATASOURCE_USERNAME = var.db_username
           SPRING_DATASOURCE_PASSWORD = var.db_password
+          SECRET_KEY                  = "uma_senha_secreta_para_aula_123456"
         }
       }
     }
@@ -302,4 +333,3 @@ output "app_runner_service_arn" {
   description = "ARN do serviço App Runner"
   value       = aws_apprunner_service.app.arn
 }
-
