@@ -4,6 +4,7 @@ import br.com.meusistema.api.dtos.LoginRequestDTO;
 import br.com.meusistema.api.dtos.LoginResponseDTO;
 import br.com.meusistema.api.dtos.RegisterRequestDTO;
 import br.com.meusistema.api.dtos.UsuarioResponseDTO;
+import br.com.meusistema.api.enums.Role;
 import br.com.meusistema.api.model.Usuario;
 import br.com.meusistema.api.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +28,13 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public LoginResponseDTO register(RegisterRequestDTO request) {
+        Role role = request.role() != null ? request.role() : Role.USER;
+
         Usuario usuario = Usuario.builder()
                 .username(request.username())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .role(request.role())
+                .role(role)
                 .build();
         usuarioRepository.save(usuario);
 
