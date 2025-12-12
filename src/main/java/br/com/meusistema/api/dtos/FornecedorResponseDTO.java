@@ -4,7 +4,7 @@ import br.com.meusistema.api.enums.TipoFornecedorEnum;
 
 public record FornecedorResponseDTO(
         Long id,
-        String nome,
+        String nomeFantasia,
         String email,
         String cnpj,
         TipoFornecedorEnum tipoFornecedor,
