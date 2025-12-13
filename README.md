@@ -73,6 +73,8 @@ No **AWS Console**:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
      <img width="1781" height="766" alt="image" src="https://github.com/user-attachments/assets/fa45356f-f82e-47b5-b25d-a9beffdec462" />
+  <img width="1596" height="218" alt="image" src="https://github.com/user-attachments/assets/7074143f-dcae-4941-a6e5-55a88b4ebe79" />
+
 
 
 Para pegar o **AWS Account ID**:
