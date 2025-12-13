@@ -763,6 +763,9 @@ Casos tratados no projeto:
 
 ### 1) AWS App Runner (por que container?)
 
+<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/9e5ec4eb-b481-45e3-8673-85b882400f6a" />
+
+
 O **AWS App Runner** é uma plataforma gerenciada para rodar serviços web containerizados.
 
 No nosso projeto:
