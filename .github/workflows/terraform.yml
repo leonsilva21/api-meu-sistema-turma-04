@@ -107,12 +107,10 @@ jobs:
             AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           fi
 
-          ECR_REPO_URL=$(cd infra && terraform output -raw ecr_repository_url)
           PROJECT_NAME="${TF_VAR_project_name:-meusistema-api}"
           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}:latest"
 
-          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
-          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
+          printf "IMAGE_URI=%s\n" "${IMAGE_URI}" >> "${GITHUB_ENV}"
 
           aws ecr get-login-password --region "${AWS_REGION}" | \
             docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
