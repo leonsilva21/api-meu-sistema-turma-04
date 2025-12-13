@@ -582,6 +582,9 @@ graph LR
 
 ### 3) Terraform como “criador da nuvem” (IaC)
 
+<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/2605611a-8e00-424d-b21c-175d423c8c63" />
+
+
 ```mermaid
 graph LR
   TF["Terraform (infra/)"] --> AWS["AWS (recursos)"]
