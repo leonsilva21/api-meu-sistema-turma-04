@@ -109,6 +109,9 @@ No GitHub do *fork*: **Settings → Secrets and variables → Actions**
 
 ### 5) Provisionando a infra com Terraform (GitHub Actions)
 
+<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/92507082-e990-411d-8f87-0a6d44e91228" />
+
+
 O workflow de infra é manual:
 
 - arquivo: `.github/workflows/terraform.yml`
