@@ -15,6 +15,7 @@ on:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+  TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'meusistema-api' }}
   TF_VAR_db_username: ${{ secrets.TF_DB_USER }}
   TF_VAR_db_password: ${{ secrets.TF_DB_PASSWORD }}
   TF_VAR_artifact_bucket_name: ${{ vars.ARTIFACT_BUCKET_NAME || '' }}
@@ -79,6 +80,18 @@ jobs:
       # First-run friendly:
       # O App Runner precisa de uma imagem existente no ECR (ex.: :latest) para não falhar em CREATE_FAILED.
       # Então fazemos bootstrap do repositório e publicamos uma imagem antes do apply completo.
+      - name: Ensure ECR repository is in Terraform state (import if needed)
+        if: env.TF_OPERATION == 'apply'
+        working-directory: infra
+        run: |
+          PROJECT_NAME="${TF_VAR_project_name:-meusistema-api}"
+          if aws ecr describe-repositories --repository-names "${PROJECT_NAME}" >/dev/null 2>&1; then
+            if ! terraform state list | grep -q '^aws_ecr_repository\.app_repo$'; then
+              echo "ECR repo '${PROJECT_NAME}' já existe; importando para o state do Terraform..."
+              terraform import aws_ecr_repository.app_repo "${PROJECT_NAME}"
+            fi
+          fi
+
       - name: Terraform apply (bootstrap ECR)
         if: env.TF_OPERATION == 'apply'
         working-directory: infra
@@ -95,7 +108,8 @@ jobs:
           fi
 
           ECR_REPO_URL=$(cd infra && terraform output -raw ecr_repository_url)
-          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/$(basename ${ECR_REPO_URL}):latest"
+          PROJECT_NAME="${TF_VAR_project_name:-meusistema-api}"
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}:latest"
 
           echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
           echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV

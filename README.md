@@ -100,6 +100,7 @@ No GitHub do *fork*: **Settings → Secrets and variables → Actions**
 #### Variables (valores não sensíveis)
 
 - `AWS_REGION` → região (ex.: `us-east-1`)
+- `PROJECT_NAME` → (opcional) nome base dos recursos (ECR/App Runner). Padrão: `meusistema-api` (útil para evitar conflito em labs repetidos na mesma conta AWS).
 
 > O pipeline de deploy usa `APP_RUNNER_SERVICE_ARN` para apontar o App Runner para a **nova imagem** no ECR.
 
