@@ -84,6 +84,32 @@ Para pegar o **AWS Account ID**:
 
 ---
 
+### ⚠️ Troubleshooting (muito comum em aula)
+
+#### Erro: `SubscriptionRequiredException` ao criar App Runner / VPC Connector
+
+Exemplo de mensagem:
+
+- `api error SubscriptionRequiredException: The AWS Access Key Id needs a subscription for the service`
+
+Isso **não é erro do Terraform nem do código**: é a **conta AWS** que ainda não está habilitada para usar o App Runner.
+
+Checklist para resolver:
+
+1. **Conta AWS está “completa”?**
+   - Billing/forma de pagamento configurada
+   - Onboarding finalizado (contas muito novas às vezes bloqueiam serviços)
+2. **Região correta**
+   - Use `us-east-1 (N. Virginia)` (padrão da aula)
+3. **Abra o Console do App Runner**
+   - Entre no App Runner e complete qualquer tela inicial de “Get started/Enable”
+4. **Ambientes educacionais/sandbox**
+   - Em AWS Academy/AWS Educate/Learner Lab, App Runner pode não estar disponível (mesmo com credenciais válidas)
+
+Depois de corrigir, rode novamente: **Actions → Provision Infrastructure → apply**.
+
+---
+
 ### 4) Configure Secrets e Variables no GitHub Actions (no fork do aluno)
 
 No GitHub do *fork*: **Settings → Secrets and variables → Actions**

@@ -64,6 +64,25 @@ jobs:
           workflow_conclusion: success
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Guardrail (destroy requires state)
+        if: env.TF_OPERATION == 'destroy'
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          if [ ! -f terraform.tfstate ]; then
+            cat >&2 <<'EOF'
+Nenhum `infra/terraform.tfstate` foi encontrado para este repositório.
+
+Sem o state, o Terraform pode “destruir com sucesso” sem remover nada (porque ele não sabe o que criou).
+
+Como resolver:
+1) Rode `apply` pelo menos uma vez com sucesso (isso faz upload do state como artifact), ou
+2) Use um backend remoto de state (S3/DynamoDB) para estado persistente, ou
+3) Apague manualmente os recursos no AWS Console.
+EOF
+            exit 1
+          fi
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -75,6 +94,32 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Preflight (App Runner disponível na conta?)
+        if: env.TF_OPERATION == 'apply'
+        run: |
+          set -euo pipefail
+          echo "Checando acesso ao AWS App Runner na conta/região..."
+          if ! out=$(aws apprunner list-services --max-results 1 2>&1); then
+            echo "$out" >&2
+            if echo "$out" | grep -q "SubscriptionRequiredException"; then
+              cat >&2 <<'EOF'
+
+ERRO: Sua conta AWS não está habilitada/subscrita para o AWS App Runner (SubscriptionRequiredException).
+
+Como resolver (rápido):
+1) Entre no AWS Console e confirme que a conta está com Billing ativo (cartão configurado) e finalizou o onboarding.
+2) Abra o Console do App Runner na região usada (ex.: us-east-1) e complete qualquer tela de "Get started/Enable".
+3) Se você estiver usando ambiente educacional/sandbox (AWS Academy/AWS Educate), App Runner pode não estar disponível.
+
+Depois disso, rode o workflow novamente.
+EOF
+            exit 1
+          fi
+            echo "Falha ao acessar App Runner. Verifique credenciais/região/permissões."
+            exit 1
+          fi
+          echo "OK: App Runner acessível."
 
       - name: Terraform init
         working-directory: infra
@@ -92,6 +137,31 @@ jobs:
             if ! terraform state list | grep -q '^aws_ecr_repository\.app_repo$'; then
               echo "ECR repo '${PROJECT_NAME}' já existe; importando para o state do Terraform..."
               terraform import aws_ecr_repository.app_repo "${PROJECT_NAME}"
+            fi
+          fi
+
+      - name: Ensure shared-name resources are in Terraform state (import if needed)
+        if: env.TF_OPERATION == 'apply'
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          PROJECT_NAME="${TF_VAR_project_name:-meusistema-api}"
+
+          # RDS DB subnet group (nome global por conta/região)
+          DB_SUBNET_GROUP="${PROJECT_NAME}-db-subnets"
+          if aws rds describe-db-subnet-groups --db-subnet-group-name "${DB_SUBNET_GROUP}" >/dev/null 2>&1; then
+            if ! terraform state list | grep -q '^aws_db_subnet_group\.db_subnets$'; then
+              echo "DB subnet group '${DB_SUBNET_GROUP}' já existe; importando..."
+              terraform import aws_db_subnet_group.db_subnets "${DB_SUBNET_GROUP}"
+            fi
+          fi
+
+          # IAM role (nome global na conta)
+          ROLE_NAME="${PROJECT_NAME}-apprunner-ecr-role"
+          if aws iam get-role --role-name "${ROLE_NAME}" >/dev/null 2>&1; then
+            if ! terraform state list | grep -q '^aws_iam_role\.apprunner_ecr_access$'; then
+              echo "IAM role '${ROLE_NAME}' já existe; importando..."
+              terraform import aws_iam_role.apprunner_ecr_access "${ROLE_NAME}"
             fi
           fi
 
