@@ -16,7 +16,9 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
   # Default: usa o nome do repositório (bom para labs, evita colisões na mesma conta AWS).
-  TF_VAR_project_name: ${{ vars.PROJECT_NAME || toLower(github.event.repository.name) }}
+  # Observação: nomes de repositório no ECR normalmente devem ser minúsculos; se o seu repo tiver maiúsculas,
+  # configure explicitamente a variável PROJECT_NAME no GitHub.
+  TF_VAR_project_name: ${{ vars.PROJECT_NAME || github.event.repository.name }}
   TF_VAR_db_username: ${{ secrets.TF_DB_USER }}
   TF_VAR_db_password: ${{ secrets.TF_DB_PASSWORD }}
   TF_VAR_artifact_bucket_name: ${{ vars.ARTIFACT_BUCKET_NAME || '' }}

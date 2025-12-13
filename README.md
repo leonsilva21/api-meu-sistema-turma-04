@@ -101,6 +101,7 @@ No GitHub do *fork*: **Settings → Secrets and variables → Actions**
 
 - `AWS_REGION` → região (ex.: `us-east-1`)
 - `PROJECT_NAME` → (opcional) nome base dos recursos (ECR/App Runner/VPC Connector/etc.). Por padrão, o CI usa **o nome do repositório** (bom para labs e evita colisões na mesma conta AWS). Em reuso na mesma conta, defina algo único (ex.: `meusistema-api-aluno-joao`).
+  - Dica: prefira **minúsculas** e hífens. Se o nome do repositório tiver letras maiúsculas, defina `PROJECT_NAME` manualmente em minúsculas (recomendado para ECR/App Runner).
 
 > O pipeline de deploy usa `APP_RUNNER_SERVICE_ARN` para apontar o App Runner para a **nova imagem** no ECR.
 

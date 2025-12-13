@@ -8,7 +8,8 @@ on:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   # Mantém coerente com o Terraform: mesmo nome base dos recursos.
-  ECR_REPOSITORY: ${{ vars.PROJECT_NAME || toLower(github.event.repository.name) }}
+  # Observação: se o nome do repositório tiver maiúsculas, configure PROJECT_NAME com minúsculas.
+  ECR_REPOSITORY: ${{ vars.PROJECT_NAME || github.event.repository.name }}
 
 jobs:
   build-and-deploy:
