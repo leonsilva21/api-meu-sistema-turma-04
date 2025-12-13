@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   ECR_REPOSITORY: meusistema-api
 
 jobs:
@@ -37,6 +37,11 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
+          # Descobre o Account ID se não estiver definido como secret (facilita a vida do aluno).
+          if [ -z "${AWS_ACCOUNT_ID}" ]; then
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          fi
+
           aws ecr get-login-password --region $AWS_REGION | \
             docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
@@ -44,6 +49,10 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
+          if [ -z "${AWS_ACCOUNT_ID}" ]; then
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          fi
+
           IMAGE_TAG=${GITHUB_SHA}
           IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
 
@@ -64,7 +73,16 @@ jobs:
         env:
           APP_RUNNER_SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN }}
         run: |
+          # First-run friendly: tenta descobrir o ARN pelo nome do serviço.
+          if [ -z "${APP_RUNNER_SERVICE_ARN}" ]; then
+            APP_RUNNER_SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${ECR_REPOSITORY}'].ServiceArn | [0]" --output text)
+          fi
+
+          if [ -z "${APP_RUNNER_SERVICE_ARN}" ] || [ "${APP_RUNNER_SERVICE_ARN}" = "None" ]; then
+            echo "APP_RUNNER_SERVICE_ARN não encontrado. Rode primeiro o Provision Infrastructure (Terraform apply) para criar o serviço App Runner." >&2
+            exit 1
+          fi
+
           aws apprunner update-service \
             --service-arn "${APP_RUNNER_SERVICE_ARN}" \
             --source-configuration "ImageRepository={ImageIdentifier=${IMAGE_URI},ImageRepositoryType=ECR,ImageConfiguration={Port=8080}}"
-

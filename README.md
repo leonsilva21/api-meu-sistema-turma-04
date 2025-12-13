@@ -92,10 +92,10 @@ No GitHub do *fork*: **Settings → Secrets and variables → Actions**
 
 - `AWS_ACCESS_KEY_ID` → Access Key do IAM user
 - `AWS_SECRET_ACCESS_KEY` → Secret Key do IAM user
-- `AWS_ACCOUNT_ID` → ID da conta AWS
+- `AWS_ACCOUNT_ID` → ID da conta AWS (**opcional**: os workflows conseguem descobrir via `sts get-caller-identity`)
 - `TF_DB_USER` → usuário do Postgres do RDS (ex.: `postgres`)
 - `TF_DB_PASSWORD` → senha do Postgres do RDS (defina uma senha forte)
-- `APP_RUNNER_SERVICE_ARN` → ARN do App Runner (você obtém após criar a infra; veja abaixo)
+- `APP_RUNNER_SERVICE_ARN` → ARN do App Runner (**opcional**: o deploy tenta descobrir pelo nome do serviço; recomendado cadastrar para ficar explícito na aula)
 
 #### Variables (valores não sensíveis)
 
@@ -144,6 +144,8 @@ Agora o fluxo fica simples:
    - builda a imagem Docker
    - publica no ECR
    - atualiza o App Runner para usar a nova imagem
+
+O deploy tenta descobrir automaticamente o `APP_RUNNER_SERVICE_ARN` pelo nome do serviço (`meusistema-api`). Mesmo assim, em aula é comum cadastrar o ARN como Secret para deixar “à prova de bala”.
 
 Se quiser validar:
 
