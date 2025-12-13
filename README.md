@@ -12,6 +12,411 @@ Este repositório é um **GUIA DE ESTUDOS** para uma aula de **Backend Cloud Nat
 
 ---
 
+## 🚦 Setup de Aula (Fork + AWS + GitHub Actions + Terraform)
+
+Esta seção é o **passo a passo que seus alunos seguem do zero** até ter a API rodando na AWS com CI/CD.
+
+### Por que **Fork** (e não só clone)?
+
+Sim, é uma proposta totalmente válida (e recomendada) para uma aula prática.
+
+- **Secrets não “viajam” com clone**: cada aluno precisa configurar `Secrets` e `Variables` no *repositório dele* (GitHub Actions).
+- **Deploy precisa de credenciais próprias**: o pipeline vai publicar imagem no **ECR** e atualizar o **App Runner** na **conta AWS do aluno**.
+- **Isolamento e segurança**: cada um testa, quebra e ajusta sem afetar o repositório da turma.
+
+> Em resumo: **fork = laboratório individual com CI/CD funcionando**.
+
+### Mapa do Setup (o que acontece na aula)
+
+```mermaid
+graph LR
+  S1["1) Fork no GitHub"] --> S2["2) Conta AWS + IAM (Access Key)"]
+  S2 --> S3["3) Secrets/Vars no GitHub Actions"]
+  S3 --> S4["4) Rodar Terraform (criar infra)"]
+  S4 --> S5["5) Push na main (CI/CD)"]
+  S5 --> S6["6) App Runner no ar + RDS privado"]
+```
+
+---
+
+### 1) Faça o Fork e prepare o repositório do aluno
+
+1. Abra o repositório original no GitHub.
+2. Clique em **Fork** → escolha sua conta → crie o fork.
+3. No fork, confirme que você tem acesso a **Actions** e **Settings**.
+
+Opcional (mas recomendado): proteja a branch `main` e trabalhe por PRs em aula.
+
+---
+
+### 2) Crie uma conta AWS (e prepare segurança básica)
+
+1. Crie uma conta em `https://aws.amazon.com/` (se ainda não tiver).
+2. Ative **MFA** no root user (segurança mínima).
+3. Evite usar root user no dia a dia: vamos usar **IAM**.
+
+> 💰 Atenção de custos: RDS e App Runner podem gerar cobrança. Ao final da aula, execute `destroy` no Terraform.
+
+---
+
+### 3) Crie um usuário IAM para o GitHub Actions (Access Key ID + Secret)
+
+No **AWS Console**:
+
+1. Vá em **IAM** → **Users** → **Create user**
+2. Nome sugestão: `github-actions-meusistema`
+3. Marque acesso programático (Access Keys)
+4. Permissões (para aula):
+   - Opção simples: **AdministratorAccess** (fácil para aprender; depois remova)
+   - Opção correta (produção): policy mínima (mais trabalho; ótimo tema para próxima aula)
+5. Crie e **copie**:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
+Para pegar o **AWS Account ID**:
+
+- No canto superior direito do console geralmente aparece o ID, ou
+- Via CLI (depois de configurar credenciais): `aws sts get-caller-identity`
+
+---
+
+### 4) Configure Secrets e Variables no GitHub Actions (no fork do aluno)
+
+No GitHub do *fork*: **Settings → Secrets and variables → Actions**
+
+#### Secrets (valores sensíveis)
+
+- `AWS_ACCESS_KEY_ID` → Access Key do IAM user
+- `AWS_SECRET_ACCESS_KEY` → Secret Key do IAM user
+- `AWS_ACCOUNT_ID` → ID da conta AWS
+- `TF_DB_USER` → usuário do Postgres do RDS (ex.: `postgres`)
+- `TF_DB_PASSWORD` → senha do Postgres do RDS (defina uma senha forte)
+- `APP_RUNNER_SERVICE_ARN` → ARN do App Runner (você obtém após criar a infra; veja abaixo)
+
+#### Variables (valores não sensíveis)
+
+- `AWS_REGION` → região (ex.: `us-east-1`)
+
+> O pipeline de deploy usa `APP_RUNNER_SERVICE_ARN` para apontar o App Runner para a **nova imagem** no ECR.
+
+---
+
+### 5) Provisionando a infra com Terraform (GitHub Actions)
+
+O workflow de infra é manual:
+
+- arquivo: `.github/workflows/terraform.yml`
+- modo: `workflow_dispatch`
+
+Passo a passo:
+
+1. Vá em **Actions** → **Provision Infrastructure**
+2. Clique em **Run workflow**
+3. Selecione `apply`
+
+Ao final, veja os **outputs** do Terraform no log do workflow:
+
+- `app_runner_service_arn` → copie e cadastre como `APP_RUNNER_SERVICE_ARN` (Secrets)
+- `rds_endpoint` → útil para debug
+- `ecr_repository_url` → confirma onde a imagem será publicada
+
+> Dica de aula: peça para os alunos colarem o `app_runner_service_arn` no Secret e, só então, fazerem um commit para disparar o deploy.
+
+---
+
+### 6) CI/CD: o primeiro deploy (GitHub → ECR → App Runner)
+
+Agora o fluxo fica simples:
+
+1. Faça um commit no fork (push na `main`)
+2. O workflow `.github/workflows/deploy.yml`:
+   - builda o JAR
+   - builda a imagem Docker
+   - publica no ECR
+   - atualiza o App Runner para usar a nova imagem
+
+Se quiser validar:
+
+- abra o endpoint do App Runner e teste `/health`
+
+---
+
+### 7) Terraform local (especialmente para quem usa Windows)
+
+Rodar Terraform localmente é excelente para aprender **plan/apply/destroy** e entender o que o CI está fazendo.
+
+#### Instalar Terraform no Windows
+
+Escolha uma opção:
+
+```powershell
+# Opção 1) winget (Windows 10/11)
+winget install HashiCorp.Terraform
+```
+
+```powershell
+# Opção 2) Chocolatey
+choco install terraform -y
+```
+
+```powershell
+# Opção 3) Scoop
+scoop install terraform
+```
+
+Valide:
+
+```powershell
+terraform -v
+```
+
+#### Instalar AWS CLI no Windows
+
+```powershell
+winget install Amazon.AWSCLI
+aws --version
+```
+
+#### Configurar credenciais no seu SO (variáveis de ambiente)
+
+No PowerShell (sessão atual):
+
+```powershell
+$env:AWS_ACCESS_KEY_ID="SEU_ACCESS_KEY"
+$env:AWS_SECRET_ACCESS_KEY="SEU_SECRET_KEY"
+$env:AWS_REGION="us-east-1"
+```
+
+Ou configure de forma persistente com:
+
+```powershell
+aws configure
+```
+
+#### Passar variáveis do Terraform (db user/senha)
+
+Você tem duas formas (ensino recomendável: `terraform.tfvars`).
+
+**Opção A — `terraform.tfvars` (recomendado):**
+
+Crie `backend-meusistema/api/infra/terraform.tfvars`:
+
+```hcl
+db_username = "postgres"
+db_password = "SENHA_FORTE_AQUI"
+aws_region  = "us-east-1"
+```
+
+**Opção B — env vars (útil em CI):**
+
+```powershell
+$env:TF_VAR_db_username="postgres"
+$env:TF_VAR_db_password="SENHA_FORTE_AQUI"
+$env:TF_VAR_aws_region="us-east-1"
+```
+
+#### Rodar Terraform local (plan/apply/destroy)
+
+```powershell
+cd backend-meusistema/api/infra
+
+terraform init
+terraform plan
+terraform apply
+```
+
+Para destruir (final da aula):
+
+```powershell
+terraform destroy
+```
+
+> ⚠️ Importante: `destroy` evita custo contínuo do RDS/App Runner.
+
+---
+
+## 🧨 Encerramento da Aula: `destroy` (parar cobrança) + limpeza final
+
+Se você não destruir a infraestrutura, o AWS vai continuar mantendo os recursos **ligados** — e isso pode gerar **cobrança recorrente** (principalmente **RDS**).
+
+### O que acontece com a cobrança depois do `destroy`?
+
+- **Recursos destruídos deixam de ser cobrados** (por exemplo: instância do RDS e serviço do App Runner).
+- **O que pode continuar gerando custo** é qualquer coisa que **não foi destruída** (ex.: snapshots/backups, logs, imagens em registry, etc.).
+
+> ✅ Neste laboratório, o Terraform foi configurado para facilitar a desmontagem (ex.: `skip_final_snapshot = true` no RDS). Ainda assim, é sua responsabilidade validar no Console que tudo foi removido.
+
+### Passo a passo (recomendado): destruir pela GitHub Actions
+
+1. No seu **fork**, abra **Actions** → **Provision Infrastructure**
+2. Clique em **Run workflow**
+3. Selecione `destroy`
+4. Aguarde o workflow finalizar
+
+Depois, valide no AWS Console (5 minutos de checagem que podem economizar dinheiro):
+
+- **RDS** → Databases → confirme que o DB `${project_name}-db` não existe mais
+- **App Runner** → Services → confirme que o serviço `meusistema-api` não existe mais
+- **ECR** → Repositories → confirme que o repositório `meusistema-api` não existe mais
+- **VPC** → Your VPCs/Subnets/Security Groups → confirme que recursos da VPC do laboratório foram removidos
+
+### Passo a passo (alternativo): destruir localmente via Terraform
+
+```powershell
+cd backend-meusistema/api/infra
+terraform destroy
+```
+
+Se você usa `terraform.tfvars`, não precisa exportar `TF_VAR_*` de novo (o Terraform lê automaticamente).
+
+### Se o `destroy` falhar: a causa mais comum (ECR com imagens)
+
+Por padrão, o ECR pode impedir a remoção do repositório se ainda houver imagens.
+
+Sintoma:
+
+- erro ao destruir `aws_ecr_repository` dizendo que o repositório não está vazio
+
+Como resolver:
+
+1. AWS Console → **ECR** → Repositories → `meusistema-api`
+2. Delete todas as imagens (tags `latest`, hashes, etc.)
+3. Rode o `destroy` novamente
+
+> Dica de arquiteto: em projetos de aula/lab, é comum habilitar “force delete” do repositório. Em produção, isso deve ser bem pensado (política de retenção, auditoria, rollback).
+
+### Limpeza extra (recomendado para aula)
+
+- **Revogue as credenciais IAM** criadas para a aula:
+  - IAM → Users → `github-actions-meusistema` → Security credentials → Delete/Deactivate Access Keys
+  - (opcional) Delete o usuário IAM inteiro após a aula
+- **Remova Secrets** do GitHub no fork do aluno (ou delete o fork).
+
+---
+
+## 💸 Custos: como a AWS cobra (e como simular antes da aula)
+
+Não dá para fixar valores aqui porque preços variam por **região**, **data** e **tabela vigente**. Mas dá para ensinar (e simular) de forma objetiva.
+
+> Referência desta aula (região + câmbio): **us-east-1 (N. Virginia)** e **US$ 1 = R$ 5,402856** (atualização do provedor: **2025-12-13 00:02 UTC**).  
+> Use como conversão rápida: `custo_em_BRL = custo_em_USD * 5,402856`.
+
+### Como “pensar custo” (modelo mental)
+
+Em cloud, o custo normalmente nasce de 4 coisas:
+
+1. **Tempo ligado** (ex.: “por hora”)
+2. **Capacidade** (ex.: vCPU/memória, classe do banco)
+3. **Armazenamento** (GB/mês)
+4. **Transferência de dados** (GB saindo/entrando, requests)
+
+### O que o nosso laboratório cria (e onde costuma custar)
+
+#### 1) Amazon RDS (PostgreSQL) — normalmente o maior custo do lab
+
+Você paga por:
+
+- **DB instance-hours** (classe `db.t3.micro`, enquanto existir)
+- **Storage** (ex.: 20GB alocados no Terraform)
+- (dependendo da configuração) **backups/snapshots** e I/O
+
+Como “simular”:
+
+- Custo aproximado do RDS ≈ `horas_ligado * preço_por_hora_da_classe + GB_storage * preço_por_GB_mês`
+
+#### 2) AWS App Runner — custo por uso de compute do serviço
+
+Você paga por:
+
+- **Compute do serviço** (vCPU + memória) enquanto o serviço está rodando e recebendo tráfego
+- **Requests** e/ou componentes de rede (dependendo de configuração)
+
+Como “simular”:
+
+- Custo aproximado do App Runner ≈ `horas_ligado * (vCPU_rate + memory_rate) + requests_rate`
+
+> Observação didática: em ambientes com pouca carga, o custo pode ser baixo, mas deixar “rodando a semana toda” muda o jogo.
+
+#### 3) Amazon ECR — storage do registry de imagens
+
+Você paga por:
+
+- **Armazenamento das imagens** (GB/mês)
+- Em alguns cenários, **data transfer** ao puxar imagens (varia por arquitetura/região)
+
+Como “simular”:
+
+- Custo aproximado do ECR ≈ `GB_imagens * preço_por_GB_mês`
+
+#### 4) VPC, Subnets, Security Groups, Internet Gateway
+
+Em geral:
+
+- **VPC/Subnet/Security Group/IGW** não são os maiores custos (muitos desses são “sem custo direto”)
+- O que costuma encarecer redes é **NAT Gateway** (não usamos neste lab)
+
+> Isso é um ponto didático ótimo: “rede bem desenhada sem NAT” pode reduzir custo — mas também tem trade-offs.
+
+#### 5) CloudWatch Logs/Metrics (pode aparecer)
+
+Mesmo sem configurar explicitamente, serviços podem gerar logs/métricas.
+
+- Em geral é baixo em aula, mas é bom ensinar o aluno a olhar no **Cost Explorer**.
+
+---
+
+### Simulação prática (passo a passo com a AWS Pricing Calculator — us-east-1)
+
+1. Abra a **AWS Pricing Calculator** (pesquise por “AWS Pricing Calculator” no Google).
+2. Selecione a **região** usada na aula: `us-east-1 (N. Virginia)`.
+3. Adicione estimativas:
+
+**RDS PostgreSQL**
+- Engine: PostgreSQL
+- Classe: `db.t3.micro`
+- Storage: `20 GB`
+- Tempo ligado: você pode estimar por “mês” e depois converter para horas da aula (abaixo).
+
+**App Runner**
+- vCPU/memória conforme configuração do serviço
+- Tempo ligado: idem (mês → horas)
+- Requests: estimativa (poucas chamadas em aula geralmente)
+
+**ECR**
+- Armazenamento: estimativa do tamanho da imagem * quantidade de tags (ex.: `latest` + alguns commits)
+
+4. Gere o total e discuta em aula:
+
+- “Quanto custa se eu esquecer ligado por 7 dias?”
+- “Quanto custa se eu destruir no final da aula?”
+
+> ✅ Didática sugerida: faça os alunos simularem **2 cenários**: (A) só durante a aula, (B) uma semana ligada. A diferença fixa a importância do `destroy`.
+
+#### Convertendo “custo mensal” em “custo da aula” (fórmula prática)
+
+Quase sempre a calculadora entrega um **total mensal**. Para trazer para a realidade da aula:
+
+- Considere `730 horas/mês` (aproximação padrão)
+- `custo_hora_USD = custo_mensal_USD / 730`
+- `custo_aula_USD = custo_hora_USD * horas_da_aula`
+- `custo_aula_BRL = custo_aula_USD * 5,402856`
+
+Exemplo didático (números ilustrativos):
+
+- Se a calculadora indicar `US$ 25,00/mês` para o conjunto (RDS + App Runner + ECR + logs)
+- `custo_hora ≈ 25/730 = US$ 0,034`
+- Aula de 4h: `0,034 * 4 = US$ 0,136`
+- Em reais: `0,136 * 5,402856 ≈ R$ 0,73`
+
+Agora compare com “esqueci ligado 7 dias”:
+
+- 7 dias = 168h
+- `0,034 * 168 = US$ 5,71` → `≈ R$ 30,85`
+
+> O valor real vai depender do que você configurou na calculadora, mas o **impacto do tempo ligado** sempre aparece — e é isso que a aula precisa fixar.
+
+---
+
 ## 🗺️ O Mapa da Nuvem (Arquitetura AWS)
 
 ### 1) Caminho de execução (runtime): Frontend → API → Banco
@@ -580,4 +985,3 @@ api/
 - [ ] Explicar “Banco em subnet privada” e SG liberando só do `app_sg`
 - [ ] Navegar no `infra/main.tf` por camadas (rede → segurança → dados → runtime)
 - [ ] Explicar o pipeline `deploy.yml` (build → docker → ECR → App Runner)
-
