@@ -7,7 +7,8 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  ECR_REPOSITORY: ${{ vars.PROJECT_NAME || 'meusistema-api' }}
+  # Mantém coerente com o Terraform: mesmo nome base dos recursos.
+  ECR_REPOSITORY: ${{ vars.PROJECT_NAME || toLower(github.event.repository.name) }}
 
 jobs:
   build-and-deploy:
