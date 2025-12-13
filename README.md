@@ -780,6 +780,10 @@ No nosso projeto:
 - **Isolamento**: dependências ficam dentro da imagem.
 - **Portabilidade**: roda em qualquer runtime compatível com container.
 
+
+<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/c8e28883-2232-43fe-be5f-dfc88d17dd1f" />
+
+
 #### O que é Auto-scaling?
 
 É a capacidade de aumentar/diminuir instâncias automaticamente conforme demanda.
