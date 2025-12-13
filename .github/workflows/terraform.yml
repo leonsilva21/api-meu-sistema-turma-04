@@ -14,8 +14,8 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
-  TF_VAR_db_user: ${{ secrets.TF_DB_USER }}
+  TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+  TF_VAR_db_username: ${{ secrets.TF_DB_USER }}
   TF_VAR_db_password: ${{ secrets.TF_DB_PASSWORD }}
   TF_VAR_artifact_bucket_name: ${{ vars.ARTIFACT_BUCKET_NAME || '' }}
   TF_VAR_version_label: ${{ github.sha }}
