@@ -72,6 +72,8 @@ No **AWS Console**:
 5. Crie e **copie**:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
+     <img width="1781" height="766" alt="image" src="https://github.com/user-attachments/assets/fa45356f-f82e-47b5-b25d-a9beffdec462" />
+
 
 Para pegar o **AWS Account ID**:
 
