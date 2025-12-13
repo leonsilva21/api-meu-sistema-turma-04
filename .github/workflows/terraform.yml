@@ -76,6 +76,39 @@ jobs:
         working-directory: infra
         run: terraform init
 
+      # First-run friendly:
+      # O App Runner precisa de uma imagem existente no ECR (ex.: :latest) para não falhar em CREATE_FAILED.
+      # Então fazemos bootstrap do repositório e publicamos uma imagem antes do apply completo.
+      - name: Terraform apply (bootstrap ECR)
+        if: env.TF_OPERATION == 'apply'
+        working-directory: infra
+        run: terraform apply -auto-approve -target=aws_ecr_repository.app_repo
+
+      - name: Bootstrap Docker image (push :latest)
+        if: env.TF_OPERATION == 'apply'
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          # Descobre o Account ID se não estiver definido como secret (facilita a vida do aluno).
+          if [ -z "${AWS_ACCOUNT_ID}" ]; then
+            AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          fi
+
+          ECR_REPO_URL=$(cd infra && terraform output -raw ecr_repository_url)
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/$(basename ${ECR_REPO_URL}):latest"
+
+          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
+
+          aws ecr get-login-password --region "${AWS_REGION}" | \
+            docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+          echo "Building Docker image ${IMAGE_URI}"
+          docker build -t "${IMAGE_URI}" .
+
+          echo "Pushing Docker image ${IMAGE_URI}"
+          docker push "${IMAGE_URI}"
+
       - name: Terraform plan (${{ env.TF_OPERATION }})
         working-directory: infra
         run: |

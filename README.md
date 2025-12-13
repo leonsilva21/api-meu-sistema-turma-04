@@ -118,6 +118,12 @@ Passo a passo:
 2. Clique em **Run workflow**
 3. Selecione `apply`
 
+O workflow já faz o “primeiro deploy técnico” necessário para o App Runner não falhar na criação:
+
+- cria o repositório no **ECR**
+- faz **build e push de uma imagem `:latest`** (bootstrap)
+- só então cria o **App Runner** apontando para `:latest`
+
 Ao final, veja os **outputs** do Terraform no log do workflow:
 
 - `app_runner_service_arn` → copie e cadastre como `APP_RUNNER_SERVICE_ARN` (Secrets)
@@ -392,6 +398,9 @@ Por padrão, o ECR pode impedir a remoção do repositório se ainda houver imag
 Sintoma:
 
 - erro ao destruir `aws_ecr_repository` dizendo que o repositório não está vazio
+
+Neste laboratório, o Terraform define `force_delete = true` no ECR para facilitar o `destroy` mesmo com imagens.
+Se ainda assim houver falha (permissões/estado antigo), siga a limpeza manual abaixo.
 
 Como resolver:
 

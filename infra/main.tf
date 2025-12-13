@@ -221,6 +221,8 @@ resource "aws_db_instance" "postgres" {
 resource "aws_ecr_repository" "app_repo" {
   name                 = var.project_name
   image_tag_mutability = "MUTABLE"
+  # Aula/lab: permite `terraform destroy` mesmo com imagens existentes.
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
