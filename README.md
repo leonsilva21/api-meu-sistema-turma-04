@@ -145,7 +145,36 @@ Se quiser validar:
 
 Rodar Terraform localmente é excelente para aprender **plan/apply/destroy** e entender o que o CI está fazendo.
 
-#### Instalar Terraform no Windows
+#### Ferramentas locais (Windows / macOS / Linux)
+
+Para rodar Terraform local e testar a AWS via CLI, você precisa de:
+
+- **AWS CLI**
+- **Terraform**
+
+> Se você estiver no Windows, vamos usar **winget** para instalar tudo com comandos.
+
+---
+
+#### (Windows) Como instalar o winget (se não tiver)
+
+O **winget** (Windows Package Manager) costuma vir por padrão no **Windows 10/11**.
+
+1. Abra o PowerShell e teste:
+
+```powershell
+winget --version
+```
+
+2. Se não existir, instale o **App Installer**:
+   - Microsoft Store → procure **App Installer** → Instalar
+   - Depois reabra o terminal e teste `winget --version` novamente
+
+---
+
+#### Instalar Terraform
+
+**Windows**
 
 Escolha uma opção:
 
@@ -164,22 +193,71 @@ choco install terraform -y
 scoop install terraform
 ```
 
+**macOS**
+
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+terraform -v
+```
+
+**Linux (Ubuntu/Debian)**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y gnupg software-properties-common curl
+
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+sudo apt-get update
+sudo apt-get install -y terraform
+terraform -v
+```
+
 Valide:
 
 ```powershell
 terraform -v
 ```
 
-#### Instalar AWS CLI no Windows
+> No macOS/Linux, valide também com `terraform -v`.
+
+---
+
+#### Instalar AWS CLI
+
+**Windows**
 
 ```powershell
 winget install Amazon.AWSCLI
 aws --version
 ```
 
+**macOS**
+
+```bash
+brew install awscli
+aws --version
+```
+
+**Linux (Ubuntu/Debian)**
+
+Opção simples (via apt):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y awscli
+aws --version
+```
+
+> Em algumas distros, o `awscli` do repositório pode não ser a versão mais nova. Para produção, prefira o instalador oficial da AWS.
+
+---
+
 #### Configurar credenciais no seu SO (variáveis de ambiente)
 
-No PowerShell (sessão atual):
+**Windows (PowerShell — sessão atual):**
 
 ```powershell
 $env:AWS_ACCESS_KEY_ID="SEU_ACCESS_KEY"
@@ -190,6 +268,20 @@ $env:AWS_REGION="us-east-1"
 Ou configure de forma persistente com:
 
 ```powershell
+aws configure
+```
+
+**macOS/Linux (bash/zsh — sessão atual):**
+
+```bash
+export AWS_ACCESS_KEY_ID="SEU_ACCESS_KEY"
+export AWS_SECRET_ACCESS_KEY="SEU_SECRET_KEY"
+export AWS_REGION="us-east-1"
+```
+
+Ou configure de forma persistente com:
+
+```bash
 aws configure
 ```
 
@@ -215,7 +307,17 @@ $env:TF_VAR_db_password="SENHA_FORTE_AQUI"
 $env:TF_VAR_aws_region="us-east-1"
 ```
 
+No macOS/Linux:
+
+```bash
+export TF_VAR_db_username="postgres"
+export TF_VAR_db_password="SENHA_FORTE_AQUI"
+export TF_VAR_aws_region="us-east-1"
+```
+
 #### Rodar Terraform local (plan/apply/destroy)
+
+**Windows (PowerShell):**
 
 ```powershell
 cd backend-meusistema/api/infra
@@ -225,9 +327,19 @@ terraform plan
 terraform apply
 ```
 
+**macOS/Linux (bash/zsh):**
+
+```bash
+cd backend-meusistema/api/infra
+
+terraform init
+terraform plan
+terraform apply
+```
+
 Para destruir (final da aula):
 
-```powershell
+```bash
 terraform destroy
 ```
 
